@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TubeSave - YouTube Downloader</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', 'Inter', sans-serif;
+    }
+    body {
+      background: linear-gradient(145deg, #0b1120 0%, #111827 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    .card {
+      max-width: 860px;
+      width: 100%;
+      background: rgba(18, 25, 45, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 2.5rem;
+      box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      padding: 2rem 2rem 2.5rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0f3ff, #c084fc, #60a5fa);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .sub {
+      color: #9ca3af;
+      margin-bottom: 2rem;
+      border-left: 3px solid #3b82f6;
+      padding-left: 0.75rem;
+    }
+    .url-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .url-input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 2rem;
+      padding: 0.9rem 1.5rem;
+      font-size: 1rem;
+      color: #f1f5f9;
+      outline: none;
+    }
+    .url-input:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    }
+    .fetch-btn {
+      background: linear-gradient(105deg, #3b82f6, #8b5cf6);
+      border: none;
+      padding: 0.9rem 2rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .fetch-btn:hover {
+      transform: scale(1.02);
+      background: linear-gradient(105deg, #2563eb, #7c3aed);
+    }
+    .info-panel {
+      background: #0f172a80;
+      border-radius: 1.5rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #2d3a5e;
+    }
+    .video-title {
+      color: #cbd5e6;
+      word-break: break-word;
+    }
+    .loader {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .formats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 1rem;
+    }
+    .download-card {
+      background: #1e293b;
+      border-radius: 1.2rem;
+      padding: 0.7rem 1.2rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #334155;
+    }
+    .download-card:hover {
+      background: #2d3a5e;
+      border-color: #8b5cf6;
+    }
+    .quality-badge {
+      background: #0f172a;
+      padding: 0.25rem 0.7rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .dl-btn {
+      background: #2d3748;
+      border: none;
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      color: #60a5fa;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .dl-btn:hover {
+      background: #3b82f6;
+      color: white;
+    }
+    .error-msg {
+      background: #991b1b40;
+      border-left: 4px solid #ef4444;
+      padding: 0.8rem 1rem;
+      border-radius: 1rem;
+      color: #fecaca;
+      margin-top: 1rem;
+    }
+    .footer-note {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      text-align: center;
+      color: #5b6e8c;
+      border-top: 1px solid #1e2a44;
+      padding-top: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🎬 TubeSave</h1>
+  <div class="sub">Paste YouTube link — grab video in any quality</div>
+  <div class="url-wrapper">
+    <input type="text" id="videoUrl" class="url-input" placeholder="https://www.youtube.com/watch?v=...">
+    <button id="fetchBtn" class="fetch-btn">🔍 Analyze & Get formats</button>
+  </div>
+  <div id="infoPanel" class="info-panel" style="display: none;">
+    <div id="videoTitleDisplay" class="video-title">📹 Title: --</div>
+  </div>
+  <div id="loaderContainer"></div>
+  <div id="errorContainer"></div>
+  <div id="formatsSection" style="display: none;">
+    <div style="font-size:1.25rem; font-weight:600; color:#e2e8f0;">⬇️ Available downloads</div>
+    <div id="formatsList" class="formats-grid"></div>
+  </div>
+  <div class="footer-note">
+    ⚡ Server-side conversion • Direct download • For personal use only
+  </div>
+</div>
+
+<script>
+  const videoUrlInput = document.getElementById('videoUrl');
+  const fetchBtn = document.getElementById('fetchBtn');
+  const infoPanel = document.getElementById('infoPanel');
+  const videoTitleDisplay = document.getElementById('videoTitleDisplay');
+  const formatsSection = document.getElementById('formatsSection');
+  const formatsList = document.getElementById('formatsList');
+  const loaderContainer = document.getElementById('loaderContainer');
+  const errorContainer = document.getElementById('errorContainer');
+
+  function showLoader(show) {
+    if (show) loaderContainer.innerHTML = '<div class="loader" style="margin:0 auto;"></div><p style="color:#94a3b8;">Fetching video info...</p>';
+    else loaderContainer.innerHTML = '';
+  }
+  function clearError() { errorContainer.innerHTML = ''; }
+  function showError(msg) { errorContainer.innerHTML = `<div class="error-msg">⚠️ ${msg}</div>`; }
+  function resetUI() {
+    formatsSection.style.display = 'none';
+    infoPanel.style.display = 'none';
+    formatsList.innerHTML = '';
+    clearError();
+  }
+  function isValidYoutubeUrl(url) {
+    const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(\S*)?$/;
+    return pattern.test(url.trim());
+  }
+  async function fetchVideoFormats() {
+    const rawUrl = videoUrlInput.value.trim();
+    if (!rawUrl) { showError('Please paste a YouTube link.'); return; }
+    if (!isValidYoutubeUrl(rawUrl)) { showError('Invalid YouTube URL.'); return; }
+    resetUI();
+    showLoader(true);
+    fetchBtn.disabled = true;
+    try {
+      const response = await fetch(`/api/info?url=${encodeURIComponent(rawUrl)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch video.');
+      videoTitleDisplay.innerHTML = `📹 <strong>${escapeHtml(data.title)}</strong>`;
+      infoPanel.style.display = 'block';
+      if (data.formats && data.formats.length) {
+        renderFormats(rawUrl, data.formats);
+        formatsSection.style.display = 'block';
+      } else showError('No downloadable formats found.');
+    } catch (err) {
+      showError(err.message);
+      formatsSection.style.display = 'none';
+    } finally {
+      showLoader(false);
+      fetchBtn.disabled = false;
+    }
+  }
+  function renderFormats(videoUrl, formats) {
+    formatsList.innerHTML = '';
+    const sorted = [...formats].sort((a,b) => (parseInt(b.qualityLabel)||0) - (parseInt(a.qualityLabel)||0));
+    for (const fmt of sorted) {
+      const quality = fmt.qualityLabel || fmt.quality || 'Standard';
+      const size = fmt.contentLength ? ` (${formatBytes(fmt.contentLength)})` : '';
+      const card = document.createElement('div');
+      card.className = 'download-card';
+      card.innerHTML = `
+        <span class="quality-badge">${quality} · ${fmt.container.toUpperCase()}</span>
+        <span style="font-size:0.75rem; color:#9ca3af;">${size}</span>
+        <a href="/download?url=${encodeURIComponent(videoUrl)}&itag=${fmt.itag}" class="dl-btn" download>⬇ Download</a>
+      `;
+      formatsList.appendChild(card);
+    }
+  }
+  function formatBytes(bytes) {
+    if (!bytes) return 'unknown';
+    const units = ['B','KB','MB','GB'];
+    let i = 0;
+    let size = bytes;
+    while (size >= 1024 && i < units.length-1) { size /= 1024; i++; }
+    return `${size.toFixed(1)} ${units[i]}`;
+  }
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+  fetchBtn.addEventListener('click', fetchVideoFormats);
+  videoUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') fetchVideoFormats(); });
+</script>
+</body>
+</html>
