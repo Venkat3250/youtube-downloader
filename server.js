@@ -32,6 +32,14 @@ app.get('/api/info', async (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.status(400).json({ error: 'Missing URL' });
 
+  const ytdl = spawn(ytDlpPath, [
+  '--dump-json',
+  '--no-warnings',
+  '--extractor-args', 'youtube:player-client=android,web',
+  '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  videoUrl
+]);
+
   try {
     const ytdl = spawn(ytDlpPath, [
       '--dump-json',
