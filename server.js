@@ -32,56 +32,45 @@ app.get('/api/info', async (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.status(400).json({ error: 'Missing URL' });
 
+  // Single spawn with all needed arguments
   const ytdl = spawn(ytDlpPath, [
-  '--dump-json',
-  '--no-warnings',
-  '--extractor-args', 'youtube:player-client=android,web',
-  '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  videoUrl
-]);
+    '--dump-json',
+    '--no-warnings',
+    '--extractor-args', 'youtube:player-client=android,web',
+    '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    videoUrl
+  ]);
 
-  try {
-    const ytdl = spawn(ytDlpPath, [
-      '--dump-json',
-      '--no-warnings',
-      '--no-check-certificate',
-      videoUrl
-    ]);
+  let output = '';
+  let errorOutput = '';
 
-    let output = '';
-    let errorOutput = '';
+  ytdl.stdout.on('data', (data) => { output += data.toString(); });
+  ytdl.stderr.on('data', (data) => { errorOutput += data.toString(); });
 
-    ytdl.stdout.on('data', (data) => { output += data.toString(); });
-    ytdl.stderr.on('data', (data) => { errorOutput += data.toString(); });
+  ytdl.on('close', (code) => {
+    if (code !== 0) {
+      console.error('yt-dlp error:', errorOutput);
+      return res.status(500).json({ error: 'Failed to fetch video info: ' + errorOutput });
+    }
 
-    ytdl.on('close', (code) => {
-      if (code !== 0) {
-        console.error('yt-dlp error:', errorOutput);
-        return res.status(500).json({ error: 'Failed to fetch video info: ' + errorOutput });
-      }
+    try {
+      const videoInfo = JSON.parse(output);
+      const formats = videoInfo.formats
+        .filter(f => f.ext === 'mp4' || f.ext === 'webm')
+        .map(f => ({
+          itag: f.format_id,
+          qualityLabel: f.format_note || (f.height ? `${f.height}p` : f.quality),
+          container: f.ext,
+          contentLength: f.filesize,
+          hasVideo: f.vcodec !== 'none',
+          hasAudio: f.acodec !== 'none'
+        }));
 
-      try {
-        const videoInfo = JSON.parse(output);
-        const formats = videoInfo.formats
-          .filter(f => f.ext === 'mp4' || f.ext === 'webm')
-          .map(f => ({
-            itag: f.format_id,
-            qualityLabel: f.format_note || (f.height ? `${f.height}p` : f.quality),
-            container: f.ext,
-            contentLength: f.filesize,
-            hasVideo: f.vcodec !== 'none',
-            hasAudio: f.acodec !== 'none'
-          }));
-
-        res.json({ title: videoInfo.title, formats });
-      } catch (err) {
-        res.status(500).json({ error: 'Failed to parse video info' });
-      }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch video info: ' + err.message });
-  }
+      res.json({ title: videoInfo.title, formats });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to parse video info' });
+    }
+  });
 });
 
 app.get('/download', async (req, res) => {
