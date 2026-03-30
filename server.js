@@ -28,18 +28,24 @@ if (!fs.existsSync(ytDlpPath)) {
   process.exit(1);
 }
 
+// Path to cookies file (you will create this)
+const cookiesPath = path.join(__dirname, 'cookies.txt');
+
+// ------------------- API /info -------------------
 app.get('/api/info', async (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.status(400).json({ error: 'Missing URL' });
 
-  // Single spawn with all needed arguments
-  const ytdl = spawn(ytDlpPath, [
+  const args = [
+    '--cookies', cookiesPath,                     // <-- ADD COOKIES
     '--dump-json',
     '--no-warnings',
     '--extractor-args', 'youtube:player-client=android,web',
     '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     videoUrl
-  ]);
+  ];
+
+  const ytdl = spawn(ytDlpPath, args);
 
   let output = '';
   let errorOutput = '';
@@ -73,24 +79,40 @@ app.get('/api/info', async (req, res) => {
   });
 });
 
+// ------------------- API /download -------------------
 app.get('/download', async (req, res) => {
   const videoUrl = req.query.url;
   const itag = req.query.itag;
   if (!videoUrl || !itag) return res.status(400).send('Missing parameters');
 
   try {
-    const titleProcess = spawn(ytDlpPath, ['--get-title', videoUrl]);
+    // First get the video title (also using cookies)
+    const titleProcess = spawn(ytDlpPath, [
+      '--cookies', cookiesPath,
+      '--get-title',
+      videoUrl
+    ]);
     let title = 'video';
-    
+
     titleProcess.stdout.on('data', (data) => {
       title = data.toString().trim().replace(/[^\w\s]/gi, '');
     });
 
-    titleProcess.on('close', async () => {
-      const stream = spawn(ytDlpPath, ['-f', itag, '-o', '-', videoUrl]);
+    titleProcess.on('close', () => {
+      // Now stream the video – same arguments as info + format selection
+      const stream = spawn(ytDlpPath, [
+        '--cookies', cookiesPath,
+        '-f', itag,
+        '-o', '-',
+        '--extractor-args', 'youtube:player-client=android,web',
+        '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        videoUrl
+      ]);
+
       res.header('Content-Disposition', `attachment; filename="${title}.mp4"`);
       res.header('Content-Type', 'video/mp4');
       stream.stdout.pipe(res);
+
       stream.stderr.on('data', (data) => console.error('Download error:', data.toString()));
       stream.on('error', (err) => { if (!res.headersSent) res.status(500).send('Download error'); });
     });
