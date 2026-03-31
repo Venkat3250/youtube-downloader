@@ -39,6 +39,7 @@ app.get('/api/info', async (req, res) => {
   const args = [
     '--cookies', cookiesPath,
     '--dump-json',
+    '--verbose',            // <-- added for debugging
     '--no-warnings',
     videoUrl
   ];
@@ -52,8 +53,10 @@ app.get('/api/info', async (req, res) => {
   ytdl.stderr.on('data', (data) => { errorOutput += data.toString(); });
 
   ytdl.on('close', (code) => {
+    // Log the full errorOutput to Render logs
+    console.error('yt-dlp stderr output:', errorOutput);
     if (code !== 0) {
-      console.error('yt-dlp error:', errorOutput);
+      console.error('yt-dlp error (code ' + code + '):', errorOutput);
       return res.status(500).json({ error: 'Failed to fetch video info: ' + errorOutput });
     }
 
@@ -72,6 +75,7 @@ app.get('/api/info', async (req, res) => {
 
       res.json({ title: videoInfo.title, formats });
     } catch (err) {
+      console.error('JSON parse error:', err);
       res.status(500).json({ error: 'Failed to parse video info' });
     }
   });
