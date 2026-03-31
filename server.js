@@ -28,7 +28,7 @@ if (!fs.existsSync(ytDlpPath)) {
   process.exit(1);
 }
 
-// Path to cookies file
+// Path to cookies file (must be in the same directory)
 const cookiesPath = path.join(__dirname, 'cookies.txt');
 
 // ------------------- API /info -------------------
@@ -97,7 +97,7 @@ app.get('/download', async (req, res) => {
     });
 
     titleProcess.on('close', () => {
-      // Stream the video (no forced client, no custom UA)
+      // Stream the video – using cookies and the requested format
       const stream = spawn(ytDlpPath, [
         '--cookies', cookiesPath,
         '-f', itag,
