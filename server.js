@@ -28,7 +28,7 @@ if (!fs.existsSync(ytDlpPath)) {
   process.exit(1);
 }
 
-// Path to cookies file (you will create this)
+// Path to cookies file
 const cookiesPath = path.join(__dirname, 'cookies.txt');
 
 // ------------------- API /info -------------------
@@ -37,11 +37,9 @@ app.get('/api/info', async (req, res) => {
   if (!videoUrl) return res.status(400).json({ error: 'Missing URL' });
 
   const args = [
-    '--cookies', cookiesPath,                     // <-- ADD COOKIES
+    '--cookies', cookiesPath,
     '--dump-json',
     '--no-warnings',
-    '--extractor-args', 'youtube:player-client=android,web',
-    '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     videoUrl
   ];
 
@@ -86,7 +84,7 @@ app.get('/download', async (req, res) => {
   if (!videoUrl || !itag) return res.status(400).send('Missing parameters');
 
   try {
-    // First get the video title (also using cookies)
+    // First get the video title (using cookies)
     const titleProcess = spawn(ytDlpPath, [
       '--cookies', cookiesPath,
       '--get-title',
@@ -99,13 +97,11 @@ app.get('/download', async (req, res) => {
     });
 
     titleProcess.on('close', () => {
-      // Now stream the video – same arguments as info + format selection
+      // Stream the video (no forced client, no custom UA)
       const stream = spawn(ytDlpPath, [
         '--cookies', cookiesPath,
         '-f', itag,
         '-o', '-',
-        '--extractor-args', 'youtube:player-client=android,web',
-        '--add-header', 'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         videoUrl
       ]);
 
